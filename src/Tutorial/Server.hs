@@ -5,26 +5,39 @@ module Tutorial.Server where
 
 import Relude
 
+import Data.String (IsString (fromString))
+import GHC.Generics (Generic)
 import qualified Network.Wai as Wai
 import qualified Network.Wai.Handler.Warp as Warp
-import qualified Servant
-import GHC.Generics (Generic)
 import qualified Options.Applicative as Options
-import Data.String (IsString (fromString))
+import Options.Generic (
+  ParseField,
+  ParseFields,
+  ParseRecord (),
+  Unwrapped,
+  Wrapped,
+  getOnly,
+  parseRecord,
+  type (:::),
+  type (<!>) (..),
+  type (<?>) (..),
+ )
 import qualified Options.Generic
-import Options.Generic (ParseRecord(), getOnly, parseRecord, ParseField, ParseFields, Wrapped, Unwrapped,     type (:::),
-    type (<?>) (..), type (<!>) (..))
+import qualified Servant
 import Tutorial.API (API)
 
 -- | CLI options for the web server application.
 data Options w = Options
-  { bindPort :: w ::: Warp.Port
-      <!> "8080"
-      <?> "Specify the binding port"
-  , bindHost :: w ::: Warp.HostPreference
-      <!> "127.0.0.1"
-      <?> "Specify the binding interface"
-  } deriving (Generic)
+  { bindPort ::
+      w ::: Warp.Port
+        <!> "8080"
+        <?> "Specify the binding port"
+  , bindHost ::
+      w ::: Warp.HostPreference
+        <!> "127.0.0.1"
+        <?> "Specify the binding interface"
+  }
+  deriving (Generic)
 
 instance ParseRecord (Options Wrapped)
 deriving instance Show (Options Wrapped)
@@ -36,8 +49,8 @@ instance ParseField Warp.HostPreference where
       parseHost =
         Options.strOption $
           Options.metavar "HOST"
-            <> foldMap (Options.help  . toString) h
-            <> foldMap (Options.long  . toString) l
+            <> foldMap (Options.help . toString) h
+            <> foldMap (Options.long . toString) l
             <> foldMap Options.short s
             <> foldMap Options.value d
 
@@ -52,20 +65,18 @@ instance ParseRecord Warp.HostPreference where
 main :: IO ()
 main = Options.Generic.unwrapRecord programDescription >>= runWebServer
   where
-    -- | Description of the program as added to the CLI help text by
-    -- `optparse-generic`.
     programDescription :: Text
     programDescription = "Servant + Cognito example web application"
 
 -- | Given an 'Options' record, customize the Warp 'Settings' and
 -- run the application.
 runWebServer :: Options Unwrapped -> IO ()
-runWebServer Options{ bindPort, bindHost } = Warp.runSettings settings app
+runWebServer Options{bindPort, bindHost} = Warp.runSettings settings app
   where
     settings =
-        Warp.setPort bindPort
-      . Warp.setHost bindHost
-      $ Warp.defaultSettings
+      Warp.setPort bindPort
+        . Warp.setHost bindHost
+        $ Warp.defaultSettings
 
 -- | Servant API type.
 api :: Proxy API
